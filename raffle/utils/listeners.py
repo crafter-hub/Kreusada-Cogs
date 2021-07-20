@@ -3,9 +3,9 @@ import contextlib
 import discord
 from redbot.core import commands
 
-from .exceptions import DeniedUserEntryError
 from ..mixins.abc import RaffleMixin
 from ..mixins.metaclass import MetaClass
+from .exceptions import DeniedUserEntryError
 from .parser import RaffleManager
 
 

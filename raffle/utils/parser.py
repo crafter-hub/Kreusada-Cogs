@@ -1,16 +1,10 @@
 from typing import Literal
 
 import discord
-
 from redbot.core.commands import Context
 from redbot.core.i18n import Translator
 
-from .checks import (
-    VALID_USER_BADGES, 
-    account_age_checker, 
-    now, 
-    server_join_age_checker,
-)
+from .checks import VALID_USER_BADGES, account_age_checker, now, server_join_age_checker
 from .enums import RaffleComponents
 from .exceptions import (
     DeniedUserEntryError,
@@ -22,11 +16,7 @@ from .exceptions import (
     UnidentifiedKeyError,
     UnknownEntityError,
 )
-from .helpers import (
-    format_underscored_text, 
-    has_badge, 
-    raffle_safe_member_scanner
-)
+from .helpers import format_underscored_text, has_badge, raffle_safe_member_scanner
 
 __all__ = ("RaffleManager",)
 _ = Translator("Raffle", __file__)
@@ -70,7 +60,9 @@ class RaffleManager(object):
         # these keys won't actually be parsed if the type is wrong, but its best to raise here anyway
         if raffle_type != "reaction":
             if self.reaction_emoji:
-                raise InvalidConditionCrossover(f"(reaction_emoji) this condition cannot be used with the {raffle_type} raffle type")
+                raise InvalidConditionCrossover(
+                    f"(reaction_emoji) this condition cannot be used with the {raffle_type} raffle type"
+                )
 
     @classmethod
     def shorten_description(cls, description, length=50):
@@ -238,7 +230,9 @@ class RaffleManager(object):
 
         if self.reaction_emoji:
             if not isinstance(self.reaction_emoji, str):
-                raise RaffleSyntaxError("(reaction_emoji) Reaction emoji must be an emoji-string inside quotation marks, or an emoji")
+                raise RaffleSyntaxError(
+                    "(reaction_emoji) Reaction emoji must be an emoji-string inside quotation marks, or an emoji"
+                )
 
     @classmethod
     def check_user_entry(cls, user: discord.Member, data: dict):
@@ -249,14 +243,10 @@ class RaffleManager(object):
         if user.id in raffle_entities("entries"):
             raise DeniedUserEntryError(_("You are already in this raffle."))
 
-        if raffle_entities("prevented_users") and user.id in raffle_entities(
-            "prevented_users"
-        ):
+        if raffle_entities("prevented_users") and user.id in raffle_entities("prevented_users"):
             raise DeniedUserEntryError(_("You are not allowed to join this particular raffle."))
 
-        if raffle_entities("allowed_users") and user.id not in raffle_entities(
-            "allowed_users"
-        ):
+        if raffle_entities("allowed_users") and user.id not in raffle_entities("allowed_users"):
             raise DeniedUserEntryError(_("You are not allowed to join this particular raffle"))
 
         if user.id == raffle_entities("owner"):
@@ -273,11 +263,7 @@ class RaffleManager(object):
             for r in raffle_entities("roles_needed_to_enter"):
                 if not r in [x.id for x in user.roles]:
                     raise DeniedUserEntryError(
-                        _(
-                            "You are missing a required role: {}".format(
-                                guild.get_role(r).mention
-                            )
-                        )
+                        _("You are missing a required role: {}".format(guild.get_role(r).mention))
                     )
 
         if raffle_entities("account_age") and not account_age_checker(

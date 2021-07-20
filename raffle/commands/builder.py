@@ -12,7 +12,7 @@ from redbot.core.utils.predicates import MessagePredicate
 from ..mixins.abc import RaffleMixin
 from ..mixins.metaclass import MetaClass
 from ..utils.enums import RaffleComponents
-from ..utils.exceptions import RaffleError, DeniedUserEntryError
+from ..utils.exceptions import DeniedUserEntryError, RaffleError
 from ..utils.formatting import cross, tick
 from ..utils.helpers import cleanup_code, format_traceback, getstrftime, number_suffix, validator
 from ..utils.parser import RaffleManager
@@ -107,7 +107,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
                 "maximum_entries": valid.get("maximum_entries", None),
                 "on_end_action": valid.get("on_end_action", None),
                 "suspense_timer": valid.get("suspense_timer", None),
-                "reaction_emoji": valid.get("reaction_emoji", "\N{PARTY POPPER}")
+                "reaction_emoji": valid.get("reaction_emoji", "\N{PARTY POPPER}"),
             }
 
             for k, v in conditions.items():
@@ -137,7 +137,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             embed = discord.Embed(
                 title=f"{rafflename} raffle",
                 description=conditions["description"],
-                color=await ctx.embed_colour()
+                color=await ctx.embed_colour(),
             )
 
             try:
@@ -145,7 +145,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             except discord.HTTPException:
                 await ctx.send("I am unable to send messages to this channel.")
                 return
-            await msg.add_reaction(conditions['reaction_emoji'])
+            await msg.add_reaction(conditions["reaction_emoji"])
 
             data["external-settings"] = {"type": "reaction", "msgid": msg.id}
 
@@ -154,7 +154,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
         kwargs = {"content": tick(_("Raffle created with the name `{}`.".format(rafflename)))}
         if ctx.channel == check.result:
             kwargs["delete_after"] = 3
-            
+
         await ctx.send(**kwargs)
         await self.clean_guild_raffles(ctx)
 
