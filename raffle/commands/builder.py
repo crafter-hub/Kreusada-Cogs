@@ -7,11 +7,12 @@ from redbot.core import commands
 from redbot.core.commands import Context
 from redbot.core.i18n import Translator
 from redbot.core.utils.chat_formatting import box
+from redbot.core.utils.predicates import MessagePredicate
 
 from ..mixins.abc import RaffleMixin
 from ..mixins.metaclass import MetaClass
 from ..utils.enums import RaffleComponents
-from ..utils.exceptions import RaffleError
+from ..utils.exceptions import RaffleError, DeniedUserEntryError
 from ..utils.formatting import cross, tick
 from ..utils.helpers import cleanup_code, format_traceback, getstrftime, number_suffix, validator
 from ..utils.parser import RaffleManager
@@ -31,13 +32,13 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
         """Create a raffle."""
         pass
 
-    @create.command(name="complex")
-    async def _complex(self, ctx: Context):
-        """Create a raffle with complex conditions."""
+    @create.command()
+    async def reaction(self, ctx: Context):
+        """Create a reaction-based raffle."""
         await ctx.trigger_typing()
         check = lambda x: x.author == ctx.author and x.channel == ctx.channel
         message = _(
-            "You're about to create a new raffle.\n"
+            "You're about to create a new **reaction-based** raffle.\n"
             "Please consider reading the docs about the various "
             "conditional blocks if you haven't already.\n\n" + self.docs
         )
@@ -113,10 +114,158 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
                 if v:
                     data[k] = v
 
+            await ctx.send(_("Which channel would you like to start the raffle in?"))
+            check = MessagePredicate.valid_text_channel(ctx)
+            try:
+                await self.bot.wait_for("message", check=check, timeout=30)
+            except asyncio.TimeoutError:
+                await ctx.send(_("You took too long to respond."))
+                return
+
+            embed = discord.Embed(
+                title=f"{rafflename} raffle",
+                description=conditions["description"],
+                color=await ctx.embed_colour()
+            )
+
+            try:
+                msg = await check.result.send(embed=embed)
+            except discord.HTTPException:
+                await ctx.send("I am unable to send messages to this channel.")
+                return
+            await msg.add_reaction("\N{PARTY POPPER}")
+
+            data["external-settings"] = {"ids": f"{msg.channel.id}-{msg.id}"}
+
             raffle[rafflename] = data
+
+        kwargs = {"content": tick(_("Raffle created with the name `{}`.".format(rafflename)))}
+        if ctx.channel == check.result:
+            kwargs["delete_after"] = 3
+        await ctx.send(**kwargs)
+        await self.clean_guild_raffles(ctx)
+
+
+
+    @create.command(name="complex")
+    async def _complex(self, ctx: Context):
+        """Create a raffle with complex conditions."""
+        await ctx.trigger_typing()
+        check = lambda x: x.author == ctx.author and x.channel == ctx.channel
+        message = _(
+            "You're about to create a new raffle.\n"
+            "Please consider reading the docs about the various "
+            "conditional blocks if you haven't already.\n\n" + self.docs
+        )
+
+        message += _("\n\n**Conditions Blocks:**") + box(
+            "\n".join(f"+ {e.name}" for e in RaffleComponents), lang="diff"
+        )
+        await ctx.send(message)
+
+        try:
+            content = await self.bot.wait_for("message", timeout=500, check=check)
+        except asyncio.TimeoutError:
+            with contextlib.suppress(discord.NotFound):
+                await message.delete()
+
+        content = content.content
+        valid = validator(cleanup_code(content))
+
+        if not valid:
+            return await ctx.send(
+                cross(
+                    _(
+                        "Please provide valid YAML. You can validate your raffle YAML using `{}raffle parse`."
+                    )
+                ).format(ctx.clean_prefix)
+            )
+
+        try:
+            parser = RaffleManager(valid)
+            parser.parser(ctx)
+        except RaffleError as e:
+            exc = cross(_("An exception occured whilst parsing your data."))
+            return await ctx.send(exc + format_traceback(e))
+
+        async with self.config.guild(ctx.guild).raffles() as raffle:
+
+            rafflename = valid.get("name").lower()
+
+            if rafflename in [x.lower() for x in raffle.keys()]:
+                return await ctx.send(_("A raffle with this name already exists."))
+
+            datetimeinfo = _(
+                "{day} of {month}, {year} ({time})".format(
+                    day=number_suffix(getstrftime("d")),
+                    month=getstrftime("B"),
+                    year=getstrftime("Y"),
+                    time=getstrftime("X"),
+                )
+            )
+
+            data = {
+                "entries": [],
+                "owner": ctx.author.id,
+                "created_at": datetimeinfo,
+                "external-settings": {},
+            }
+
+            conditions = {
+                "end_message": valid.get("end_message", None),
+                "join_message": valid.get("join_message", None),
+                "account_age": valid.get("account_age", None),
+                "server_join_age": valid.get("server_join_age", None),
+                "roles_needed_to_enter": valid.get("roles_needed_to_enter", None),
+                "badges_needed_to_enter": valid.get("badges_needed_to_enter", None),
+                "prevented_users": valid.get("prevented_users", None),
+                "allowed_users": valid.get("allowed_users", None),
+                "description": valid.get("description", None),
+                "maximum_entries": valid.get("maximum_entries", None),
+                "on_end_action": valid.get("on_end_action", None),
+                "suspense_timer": valid.get("suspense_timer", None),
+            }
+
+            for k, v in conditions.items():
+                if v:
+                    data[k] = v
+
             await ctx.send(tick(_("Raffle created with the name `{}`.".format(rafflename))))
 
-        await self.clean_guild_raffles(ctx)
+            raffle[rafflename] = data
+            await self.clean_guild_raffles(ctx)
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
+        await self.notify_reaction(reaction, user, "append")
+
+    @commands.Cog.listener()
+    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.Member):
+        await self.notify_reaction(reaction, user, "remove")
+
+    async def notify_reaction(self, reaction: discord.Reaction, user: discord.Member, attr: str):
+        if user.bot:
+            return
+        rm = reaction.message
+        async with self.config.guild(user.guild).raffles() as r:
+            for raffle in r.keys():
+                if not "reaction_message_id" in r[raffle].keys():
+                    continue
+                if not rm.id == r[raffle]["reaction_message_id"]:
+                    continue
+                kwargs = {"delete_after": 4}
+                if attr == "append":
+                    try:
+                        RaffleManager.check_user_entry(user, r[raffle])
+                    except DeniedUserEntryError as e:
+                        kwargs["content"] = e
+                        return await rm.channel.send(**kwargs)
+                try:
+                    getattr(r[raffle]["entries"], attr)(user.id)
+                    message = "removed" if attr == "remove" else "added"
+                    await reaction.message.channel.send(message)
+                except ValueError:
+                    pass
 
     @create.command()
     async def simple(self, ctx, raffle_name: str, *, description: Optional[str] = None):

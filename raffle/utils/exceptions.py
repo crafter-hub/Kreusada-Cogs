@@ -49,22 +49,17 @@ class UnknownEntityError(RaffleError):
 class RaffleSyntaxError(RaffleError):
     """Raised when syntax is not provided properly."""
 
-    pass
-
 
 class RaffleDeprecationWarning(RaffleError):
     """Used for deprecated conditions."""
-
-    pass
 
 
 class UnidentifiedKeyError(RaffleError):
     """Used when a key is not valid."""
 
-    pass
-
 
 class InvalidArgument(RaffleError):
     """Used when an invalid argument is provided."""
 
-    pass
+class DeniedUserEntryError(RaffleError):
+    """Used when a user cannot join a raffle due to a condition."""

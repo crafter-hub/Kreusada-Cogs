@@ -10,9 +10,9 @@ from redbot.core.utils.chat_formatting import humanize_list, pagify
 
 from ..mixins.abc import RaffleMixin
 from ..mixins.metaclass import MetaClass
-from ..utils.checks import account_age_checker, server_join_age_checker
 from ..utils.converters import RaffleExists, RaffleFactoryConverter
-from ..utils.helpers import format_underscored_text, has_badge
+from ..utils.exceptions import DeniedUserEntryError
+from ..utils.parser import RaffleManager
 from ..utils.safety import RaffleSafeMember
 
 _ = Translator("Raffle", __file__)
@@ -106,76 +106,11 @@ class EventCommands(RaffleMixin, metaclass=MetaClass):
             - `<raffle>` - The name of the raffle to join.
         """
         r = await self.config.guild(ctx.guild).raffles()
-        raffle_data = r.get(raffle, None)
 
-        raffle_entities = lambda x: raffle_data.get(x, None)
-
-        if ctx.author.id in raffle_entities("entries"):
-            return await ctx.send(_("You are already in this raffle."))
-
-        if raffle_entities("prevented_users") and ctx.author.id in raffle_entities(
-            "prevented_users"
-        ):
-            return await ctx.send(_("You are not allowed to join this particular raffle."))
-
-        if raffle_entities("allowed_users") and ctx.author.id not in raffle_entities(
-            "allowed_users"
-        ):
-            return await ctx.send(_("You are not allowed to join this particular raffle"))
-
-        if ctx.author.id == raffle_entities("owner"):
-            return await ctx.send(_("You cannot join your own raffle."))
-
-        if raffle_entities("maximum_entries") and len(
-            raffle_entities("entries")
-        ) > raffle_entities("maximum_entries"):
-            return await ctx.send(
-                _("Sorry, the maximum number of users have entered this raffle.")
-            )
-
-        if raffle_entities("roles_needed_to_enter"):
-            for r in raffle_entities("roles_needed_to_enter"):
-                if not r in [x.id for x in ctx.author.roles]:
-                    return await ctx.send(
-                        _(
-                            "You are missing a required role: {}".format(
-                                ctx.guild.get_role(r).mention
-                            )
-                        )
-                    )
-
-        if raffle_entities("account_age") and not account_age_checker(
-            raffle_entities("account_age")
-        ):
-            return await ctx.send(
-                _(
-                    "Your account must be at least {} days old to join.".format(
-                        raffle_entities("account_age")
-                    )
-                )
-            )
-
-        if raffle_entities("server_join_age") and not server_join_age_checker(
-            ctx, raffle_entities("server_join_age")
-        ):
-            return await ctx.send(
-                _(
-                    "You must have been in this guild for at least {} days to join.".format(
-                        raffle_entities("server_join_age")
-                    )
-                )
-            )
-
-        if raffle_entities("badges_needed_to_enter"):
-            for badge in raffle_entities("badges_needed_to_enter"):
-                if not has_badge(badge, ctx.author):
-                    return await ctx.send(
-                        _(
-                            'You must have the "{}" Discord badge to join.'.format(
-                                format_underscored_text(badge)
-                            )
-                        )
-                    )
+        try:
+            RaffleManager.check_user_entry(ctx.author, r[raffle])
+        except DeniedUserEntryError as e:
+            return await ctx.send(str(e))
 
         async with self.config.guild(ctx.guild).raffles() as r:
             raffle_entities = lambda x: r[raffle].get(x, None)

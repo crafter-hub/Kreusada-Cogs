@@ -239,6 +239,15 @@ class RaffleComponents(enum.Enum):
         EXAMPLE: ComponentExamples.PREVENTED_USERS.value,
     }
 
+    roles_needed_to_enter: ComponentsDictionary = {
+        SUPPORTED_TYPES: [list],
+        POTENTIAL_EXCEPTIONS: [RaffleSyntaxError, UnknownEntityError],
+        VARIABLES: None,
+        REQUIRED_CONDITION: False,
+        DESCRIPTION: ComponentDescriptions.ROLES_NEEDED_TO_ENTER.value,
+        EXAMPLE: ComponentExamples.ROLES_NEEDED_TO_ENTER.value,
+    }
+
     server_join_age: ComponentsDictionary = {
         SUPPORTED_TYPES: [int],
         POTENTIAL_EXCEPTIONS: [RaffleSyntaxError],
@@ -255,13 +264,4 @@ class RaffleComponents(enum.Enum):
         REQUIRED_CONDITION: False,
         DESCRIPTION: ComponentDescriptions.SUSPENSE_TIMER.value,
         EXAMPLE: ComponentExamples.SUSPENSE_TIMER.value,
-    }
-
-    roles_needed_to_enter: ComponentsDictionary = {
-        SUPPORTED_TYPES: [list],
-        POTENTIAL_EXCEPTIONS: [RaffleSyntaxError, UnknownEntityError],
-        VARIABLES: None,
-        REQUIRED_CONDITION: False,
-        DESCRIPTION: ComponentDescriptions.ROLES_NEEDED_TO_ENTER.value,
-        EXAMPLE: ComponentExamples.ROLES_NEEDED_TO_ENTER.value,
     }

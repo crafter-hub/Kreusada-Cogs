@@ -1,10 +1,17 @@
 import discord
-from redbot.core.commands import Context
 
-from ..log import log
-from .checks import VALID_USER_BADGES, account_age_checker, now, server_join_age_checker
+from redbot.core.commands import Context
+from redbot.core.i18n import Translator
+
+from .checks import (
+    VALID_USER_BADGES, 
+    account_age_checker, 
+    now, 
+    server_join_age_checker,
+)
 from .enums import RaffleComponents
 from .exceptions import (
+    DeniedUserEntryError,
     InvalidArgument,
     RaffleDeprecationWarning,
     RaffleSyntaxError,
@@ -12,11 +19,14 @@ from .exceptions import (
     UnidentifiedKeyError,
     UnknownEntityError,
 )
-from .helpers import raffle_safe_member_scanner
-from .safety import RaffleSafeMember
+from .helpers import (
+    format_underscored_text, 
+    has_badge, 
+    raffle_safe_member_scanner
+)
 
 __all__ = ("RaffleManager",)
-# This file will not be receiving translations, for now
+_ = Translator("Raffle", __file__)
 
 
 class RaffleManager(object):
@@ -65,7 +75,7 @@ class RaffleManager(object):
     @classmethod
     def parse_serverjoinage(cls, ctx: Context, new_join_age: int):
         guildage = (now - ctx.guild.created_at).days
-        if not server_join_age_checker(ctx, new_join_age):
+        if not server_join_age_checker(ctx.guild, new_join_age):
             raise InvalidArgument(
                 "Days must be less than this guild's creation date ({} days)".format(guildage)
             )
@@ -82,7 +92,7 @@ class RaffleManager(object):
         if self.server_join_age:
             if not isinstance(self.server_join_age, int):
                 raise RaffleSyntaxError("(server_join_age) days must be a number")
-            if not server_join_age_checker(ctx, self.server_join_age):
+            if not server_join_age_checker(ctx.guild, self.server_join_age):
                 raise RaffleSyntaxError(
                     "(server_join_age) days must be less than this servers's creation date"
                 )
@@ -214,3 +224,76 @@ class RaffleManager(object):
                 *range(0, 11)
             ]:
                 raise InvalidArgument("(suspense_timer) must be a number between 0 and 10")
+
+    @classmethod
+    def check_user_entry(cls, user: discord.Member, data: dict):
+        raffle_entities = lambda x: data.get(x, None)
+
+        guild = user.guild
+
+        if user.id in raffle_entities("entries"):
+            raise DeniedUserEntryError(_("You are already in this raffle."))
+
+        if raffle_entities("prevented_users") and user.id in raffle_entities(
+            "prevented_users"
+        ):
+            raise DeniedUserEntryError(_("You are not allowed to join this particular raffle."))
+
+        if raffle_entities("allowed_users") and user.id not in raffle_entities(
+            "allowed_users"
+        ):
+            raise DeniedUserEntryError(_("You are not allowed to join this particular raffle"))
+
+        if user.id == raffle_entities("owner"):
+            raise DeniedUserEntryError(_("You cannot join your own raffle."))
+
+        if raffle_entities("maximum_entries") and len(
+            raffle_entities("entries")
+        ) > raffle_entities("maximum_entries"):
+            raise DeniedUserEntryError(
+                _("Sorry, the maximum number of users have entered this raffle.")
+            )
+
+        if raffle_entities("roles_needed_to_enter"):
+            for r in raffle_entities("roles_needed_to_enter"):
+                if not r in [x.id for x in user.roles]:
+                    raise DeniedUserEntryError(
+                        _(
+                            "You are missing a required role: {}".format(
+                                guild.get_role(r).mention
+                            )
+                        )
+                    )
+
+        if raffle_entities("account_age") and not account_age_checker(
+            raffle_entities("account_age")
+        ):
+            raise DeniedUserEntryError(
+                _(
+                    "Your account must be at least {} days old to join.".format(
+                        raffle_entities("account_age")
+                    )
+                )
+            )
+
+        if raffle_entities("server_join_age") and not server_join_age_checker(
+            guild, raffle_entities("server_join_age")
+        ):
+            raise DeniedUserEntryError(
+                _(
+                    "You must have been in this guild for at least {} days to join.".format(
+                        raffle_entities("server_join_age")
+                    )
+                )
+            )
+
+        if raffle_entities("badges_needed_to_enter"):
+            for badge in raffle_entities("badges_needed_to_enter"):
+                if not has_badge(badge, user):
+                    raise DeniedUserEntryError(
+                        _(
+                            'You must have the "{}" Discord badge to join.'.format(
+                                format_underscored_text(badge)
+                            )
+                        )
+                    )
