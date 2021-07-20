@@ -1,3 +1,5 @@
+from typing import Literal
+
 import discord
 
 from redbot.core.commands import Context
@@ -13,6 +15,7 @@ from .enums import RaffleComponents
 from .exceptions import (
     DeniedUserEntryError,
     InvalidArgument,
+    InvalidConditionCrossover,
     RaffleDeprecationWarning,
     RaffleSyntaxError,
     RequiredKeyError,
@@ -33,7 +36,7 @@ class RaffleManager(object):
     """Parses the required and relevant yaml data to ensure
     that it matches the specified requirements."""
 
-    def __init__(self, data):
+    def __init__(self, data, raffle_type: Literal["command", "reaction"]):
         super().__init__()
         self.data = data
         self.name = data.get("name", None)
@@ -49,6 +52,9 @@ class RaffleManager(object):
         self.end_message = data.get("end_message", None)
         self.on_end_action = data.get("on_end_action", None)
         self.suspense_timer = data.get("suspense_timer", None)
+        self.reaction_emoji = data.get("reaction_emoji", None)
+
+        self.raffle_type = raffle_type
 
         # dep warnings come first
         if "join_age" in self.data.keys():
@@ -60,6 +66,11 @@ class RaffleManager(object):
         for key in self.data.keys():
             if not key in [x.name for x in RaffleComponents]:
                 raise UnidentifiedKeyError(f'"{key}" is not a documented condition/block')
+
+        # these keys won't actually be parsed if the type is wrong, but its best to raise here anyway
+        if raffle_type != "reaction":
+            if self.reaction_emoji:
+                raise InvalidConditionCrossover(f"(reaction_emoji) this condition cannot be used with the {raffle_type} raffle type")
 
     @classmethod
     def shorten_description(cls, description, length=50):
@@ -224,6 +235,10 @@ class RaffleManager(object):
                 *range(0, 11)
             ]:
                 raise InvalidArgument("(suspense_timer) must be a number between 0 and 10")
+
+        if self.reaction_emoji:
+            if not isinstance(self.reaction_emoji, str):
+                raise RaffleSyntaxError("(reaction_emoji) Reaction emoji must be an emoji-string inside quotation marks, or an emoji")
 
     @classmethod
     def check_user_entry(cls, user: discord.Member, data: dict):

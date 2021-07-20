@@ -61,5 +61,14 @@ class UnidentifiedKeyError(RaffleError):
 class InvalidArgument(RaffleError):
     """Used when an invalid argument is provided."""
 
+
 class DeniedUserEntryError(RaffleError):
     """Used when a user cannot join a raffle due to a condition."""
+
+
+class UnknownEmojiError(RaffleError):
+    """Raised when the provided reaction emoji is invalid."""
+
+
+class InvalidConditionCrossover(RaffleError):
+    """Raised when a condition is used on the wrong raffle type."""

@@ -54,8 +54,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             with contextlib.suppress(discord.NotFound):
                 await message.delete()
 
-        content = content.content
-        valid = validator(cleanup_code(content))
+        valid = validator(cleanup_code(content.content))
 
         if not valid:
             return await ctx.send(
@@ -67,7 +66,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             )
 
         try:
-            parser = RaffleManager(valid)
+            parser = RaffleManager(valid, "reaction")
             parser.parser(ctx)
         except RaffleError as e:
             exc = cross(_("An exception occured whilst parsing your data."))
@@ -108,11 +107,24 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
                 "maximum_entries": valid.get("maximum_entries", None),
                 "on_end_action": valid.get("on_end_action", None),
                 "suspense_timer": valid.get("suspense_timer", None),
+                "reaction_emoji": valid.get("reaction_emoji", "\N{PARTY POPPER}")
             }
 
             for k, v in conditions.items():
                 if v:
                     data[k] = v
+
+            try:
+                await content.add_reaction(conditions["reaction_emoji"])
+            except discord.HTTPException:
+                await ctx.send(
+                    _(
+                        "Your reaction emoji {} appears to be invalid. "
+                        "Make sure that if it is a custom emoji, I am in the "
+                        "server that the emoji is in."
+                    ).format(f"\"{conditions['reaction_emoji']}\"")
+                )
+                return
 
             await ctx.send(_("Which channel would you like to start the raffle in?"))
             check = MessagePredicate.valid_text_channel(ctx)
@@ -133,19 +145,18 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             except discord.HTTPException:
                 await ctx.send("I am unable to send messages to this channel.")
                 return
-            await msg.add_reaction("\N{PARTY POPPER}")
+            await msg.add_reaction(conditions['reaction_emoji'])
 
-            data["external-settings"] = {"ids": f"{msg.channel.id}-{msg.id}"}
+            data["external-settings"] = {"type": "reaction", "msgid": msg.id}
 
             raffle[rafflename] = data
 
         kwargs = {"content": tick(_("Raffle created with the name `{}`.".format(rafflename)))}
         if ctx.channel == check.result:
             kwargs["delete_after"] = 3
+            
         await ctx.send(**kwargs)
         await self.clean_guild_raffles(ctx)
-
-
 
     @create.command(name="complex")
     async def _complex(self, ctx: Context):
@@ -169,8 +180,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             with contextlib.suppress(discord.NotFound):
                 await message.delete()
 
-        content = content.content
-        valid = validator(cleanup_code(content))
+        valid = validator(cleanup_code(content.content))
 
         if not valid:
             return await ctx.send(
@@ -182,7 +192,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
             )
 
         try:
-            parser = RaffleManager(valid)
+            parser = RaffleManager(valid, "command")
             parser.parser(ctx)
         except RaffleError as e:
             exc = cross(_("An exception occured whilst parsing your data."))
@@ -208,7 +218,7 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
                 "entries": [],
                 "owner": ctx.author.id,
                 "created_at": datetimeinfo,
-                "external-settings": {},
+                "external-settings": {"type": "command"},
             }
 
             conditions = {
@@ -234,38 +244,6 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
 
             raffle[rafflename] = data
             await self.clean_guild_raffles(ctx)
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member):
-        await self.notify_reaction(reaction, user, "append")
-
-    @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.Member):
-        await self.notify_reaction(reaction, user, "remove")
-
-    async def notify_reaction(self, reaction: discord.Reaction, user: discord.Member, attr: str):
-        if user.bot:
-            return
-        rm = reaction.message
-        async with self.config.guild(user.guild).raffles() as r:
-            for raffle in r.keys():
-                if not "reaction_message_id" in r[raffle].keys():
-                    continue
-                if not rm.id == r[raffle]["reaction_message_id"]:
-                    continue
-                kwargs = {"delete_after": 4}
-                if attr == "append":
-                    try:
-                        RaffleManager.check_user_entry(user, r[raffle])
-                    except DeniedUserEntryError as e:
-                        kwargs["content"] = e
-                        return await rm.channel.send(**kwargs)
-                try:
-                    getattr(r[raffle]["entries"], attr)(user.id)
-                    message = "removed" if attr == "remove" else "added"
-                    await reaction.message.channel.send(message)
-                except ValueError:
-                    pass
 
     @create.command()
     async def simple(self, ctx, raffle_name: str, *, description: Optional[str] = None):

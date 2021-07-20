@@ -9,6 +9,7 @@ from .exceptions import (
     RaffleError,
     RaffleSyntaxError,
     RequiredKeyError,
+    UnknownEmojiError,
     UnknownEntityError,
 )
 
@@ -115,6 +116,10 @@ class ComponentDescriptions(enum.Enum):
         "The amount of seconds that the bot types for before the winner is shown. "
         "Must be a number between 1 and 10."
     )
+    REACTION_EMOJI = _(
+        "The emoji used as the reaction emoji for reaction raffles. "
+        "This condition is exclusive to reaction raffles only."
+    )
 
 
 class ComponentExamples(enum.Enum):
@@ -133,6 +138,7 @@ class ComponentExamples(enum.Enum):
     MAXIMUM_ENTRIES = 10
     ON_END_ACTION = "remove_and_prevent_winner"
     SUSPENSE_TIMER = 3
+    REACTION_EMOJI = ":tada:"
 
 
 SUPPORTED_TYPES = "supported_types"
@@ -237,6 +243,15 @@ class RaffleComponents(enum.Enum):
         REQUIRED_CONDITION: False,
         DESCRIPTION: ComponentDescriptions.PREVENTED_USERS.value,
         EXAMPLE: ComponentExamples.PREVENTED_USERS.value,
+    }
+
+    reaction_emoji: ComponentsDictionary = {
+        SUPPORTED_TYPES: [str],
+        POTENTIAL_EXCEPTIONS: [UnknownEmojiError, RaffleSyntaxError],
+        VARIABLES: None,
+        REQUIRED_CONDITION: False,
+        DESCRIPTION: ComponentDescriptions.REACTION_EMOJI.value,
+        EXAMPLE: ComponentExamples.REACTION_EMOJI.value,
     }
 
     roles_needed_to_enter: ComponentsDictionary = {

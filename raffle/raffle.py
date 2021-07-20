@@ -10,6 +10,7 @@ from redbot.core.utils.chat_formatting import humanize_list
 from .commands import Commands
 from .mixins.metaclass import MetaClass
 from .utils.cleanup import CleanupHelpers
+from .utils.listeners import Listeners
 from .version_handler import VersionHandler
 
 RaffleCog = getattr(commands, "Cog", object)
@@ -23,6 +24,7 @@ with open(pathlib.Path(__file__).parent / "info.json") as fp:
 mixinargs = (
     CleanupHelpers,
     Commands,
+    Listeners,
     RaffleCog,
 )
 
