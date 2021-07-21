@@ -102,7 +102,6 @@ class BuiltinFunctions(MixinMeta):
         functions = await self.config.user(ctx.author).functions()
         loaded = list(filter(lambda x: x[1]["loaded"], list(functions.items())))
         unloaded = list(filter(lambda x: not x[1]["loaded"], list(functions.items())))
-        print(loaded, unloaded)
         message = f"Loaded functions ({len(loaded)}):\n" + ", ".join([i[0] for i in loaded])
         message += f"\n\nUnloaded functions ({len(unloaded)}):\n" + ", ".join(
             [i[0] for i in unloaded]

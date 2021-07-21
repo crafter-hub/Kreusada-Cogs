@@ -104,7 +104,6 @@ class Keywords(MixinMeta):
         keywords = await self.config.user(ctx.author).keywords()
         loaded = list(filter(lambda x: x[1]["loaded"], list(keywords.items())))
         unloaded = list(filter(lambda x: not x[1]["loaded"], list(keywords.items())))
-        print(loaded, unloaded)
         message = f"Loaded keywords ({len(loaded)}):\n" + ", ".join([i[0] for i in loaded])
         message += f"\n\nUnloaded keywords ({len(unloaded)}):\n" + ", ".join(
             [i[0] for i in unloaded]
