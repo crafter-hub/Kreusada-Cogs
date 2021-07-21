@@ -5,7 +5,7 @@ from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 
 from .abc import MixinMeta
 from .converters import FunctionDescriptorConverter, StatusConverter
-from .utils import KEY, mapping, pybox, yield_chunks
+from .utils import KEY, compose_menu, mapping, pybox, yield_chunks
 
 
 class BuiltinFunctions(MixinMeta):
@@ -69,7 +69,6 @@ class BuiltinFunctions(MixinMeta):
                 description=description,
                 color=await ctx.embed_colour(),
             )
-            embed.set_footer(text=f"Page {page}/{len(chunks)}")
 
             if not defined_status:
                 embed.add_field(
@@ -78,7 +77,7 @@ class BuiltinFunctions(MixinMeta):
                 )
 
             embeds_list.append(embed)
-        await menu(ctx, embeds_list, DEFAULT_CONTROLS)
+        await compose_menu(ctx, embeds_list)
 
     @bif.command(name="load")
     async def bif_load(self, ctx, *functions):
