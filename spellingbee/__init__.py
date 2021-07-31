@@ -1,19 +1,19 @@
 import asyncio
 import contextlib
 import io
+import pathlib
+import random
+import re
+
 import discord
 import gtts
-import pathlib
-import re
-import random
 import yaml
-
 from redbot.core import commands
 from redbot.core.commands import BadArgument, Context, Converter
-from redbot.core.utils.chat_formatting import humanize_list, bold
-
+from redbot.core.utils.chat_formatting import bold, humanize_list
 
 QUESTION = "\N{WHITE QUESTION MARK ORNAMENT}"
+
 
 class Difficulty(Converter):
     async def convert(self, ctx: Context, argument: str.lower):
@@ -27,8 +27,9 @@ class Difficulty(Converter):
 
 def get_clue(s):
     from random import randrange as r
-    firstfind = re.findall(s[len(s)//r(4,6):len(s)-1//1-len(s)//r(3,4)], s)
-    return re.sub(firstfind[0], "_"*len(firstfind[0]), s)
+
+    firstfind = re.findall(s[len(s) // r(4, 6) : len(s) - 1 // 1 - len(s) // r(3, 4)], s)
+    return re.sub(firstfind[0], "_" * len(firstfind[0]), s)
 
 
 class SpellingBee(commands.Cog):
@@ -44,9 +45,7 @@ class SpellingBee(commands.Cog):
     async def spell(self, ctx, difficulty: Difficulty):
         """Try and spell a word."""
         alert = await ctx.send("Loading spelling test...")
-        word, example = random.choice(
-            list(self.data[difficulty].items())
-        )
+        word, example = random.choice(list(self.data[difficulty].items()))
         mp3 = io.BytesIO()
         tts = gtts.gTTS(f"{word}... {example}")
         tts.write_to_fp(mp3)
@@ -101,14 +100,16 @@ class SpellingBee(commands.Cog):
 
         if not await self.bot.ignored_channel_or_guild(message):
             return
-            
+
         if not await self.bot.allowed_by_whitelist_blacklist(user):
             return
 
         for k, v in self.spelling_messages.items():
             if all([user.id == v[0], message.id == v[1], not message.content.endswith("||")]):
-                await reaction.message.edit(content=f"{message.content}\n\n**Clue:** ||{get_clue(k)}||")
-        
+                await reaction.message.edit(
+                    content=f"{message.content}\n\n**Clue:** ||{get_clue(k)}||"
+                )
+
 
 def setup(bot):
     bot.add_cog(SpellingBee(bot))
