@@ -26,9 +26,8 @@ class Difficulty(Converter):
 
 
 def get_clue(s):
-    from random import randrange as r
-
-    firstfind = re.findall(s[len(s) // r(4, 6) : len(s) - 1 // 1 - len(s) // r(3, 4)], s)
+    r = random.randrange  # shorttyping
+    firstfind = re.findall(s[len(s)//r(4, 6):len(s)-1//1-len(s)//r(3, 4)], s)
     return re.sub(firstfind[0], "_" * len(firstfind[0]), s)
 
 
