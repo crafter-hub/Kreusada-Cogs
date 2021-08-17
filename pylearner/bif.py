@@ -1,7 +1,6 @@
 import discord
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import box, humanize_list
-from redbot.core.utils.menus import DEFAULT_CONTROLS, menu
 
 from .abc import MixinMeta
 from .converters import FunctionDescriptorConverter, StatusConverter

@@ -1,11 +1,12 @@
 import builtins
 import inspect
 import keyword
+import types
 
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import humanize_list
 
-from .utils import pybox, specific_builtin_functions
+from .utils import pybox
 
 
 class StatusConverter(commands.Converter):
@@ -28,6 +29,9 @@ class KWDConverter(commands.Converter):
 
 class FunctionDescriptorConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, function):
-        if not function in specific_builtin_functions:
+        builtin_functions = filter(
+            lambda x: isinstance(x, types.BuiltinFunctionType), map(eval, dir(builtins))
+        )
+        if not function in map(lambda x: x.__name__, builtin_functions):
             raise commands.BadArgument('"%s" is not a valid builtin function.' % function)
         return pybox(inspect.getdoc(getattr(builtins, function)))

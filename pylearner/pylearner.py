@@ -1,6 +1,8 @@
+import builtins
 import json
 import keyword
 import pathlib
+import types
 
 from redbot.core import Config, commands
 from redbot.core.utils.chat_formatting import humanize_list
@@ -8,10 +10,14 @@ from redbot.core.utils.chat_formatting import humanize_list
 from .abc import MetaClass
 from .bif import BuiltinFunctions
 from .kwd import Keywords
-from .utils import specific_builtin_functions
 
 with open(pathlib.Path(__file__).parent / "info.json") as fp:
     __red_end_user_data_statement__ = json.load(fp)["end_user_data_statement"]
+
+
+filtered_builtins = filter(
+    lambda x: isinstance(x, types.BuiltinFunctionType), map(eval, dir(builtins))
+)
 
 
 class PyLearner(BuiltinFunctions, Keywords, commands.Cog, metaclass=MetaClass):
@@ -24,7 +30,7 @@ class PyLearner(BuiltinFunctions, Keywords, commands.Cog, metaclass=MetaClass):
         "keywords": {kw: {"status": "incomplete", "loaded": True} for kw in keyword.kwlist},
         "functions": {
             func: {"status": "incomplete", "loaded": func not in ("__import__", "__build_class__")}
-            for func in specific_builtin_functions
+            for func in map(lambda x: x.__name__, filtered_builtins)
         },
     }
 
