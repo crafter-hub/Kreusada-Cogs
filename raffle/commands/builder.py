@@ -12,7 +12,7 @@ from ..mixins.abc import RaffleMixin
 from ..mixins.metaclass import MetaClass
 from ..utils.converters import RaffleNameConverter
 from ..utils.enums import RaffleComponents
-from ..utils.exceptions import RaffleError
+from ..utils.exceptions import InvalidArgument, RaffleError
 from ..utils.formatting import cross, tick
 from ..utils.helpers import cleanup_code, format_traceback, getstrftime, number_suffix, validator
 from ..utils.parser import RaffleManager
@@ -109,9 +109,18 @@ class BuilderCommands(RaffleMixin, metaclass=MetaClass):
                 "maximum_entries": valid.get("maximum_entries", None),
                 "on_end_action": valid.get("on_end_action", None),
                 "suspense_timer": valid.get("suspense_timer", None),
+                "entry_cost": valid.get("entry_cost", None),
             }
 
             for k, v in conditions.items():
+                if k == "entry_cost":
+                    try:
+                        manager = RaffleManager
+                        await manager.parse_entry_cost(ctx, v)
+                    except InvalidArgument as e:
+                        exc = cross(_("An exception occured whilst parsing your data."))
+                        return await ctx.send(exc + format_traceback(e))
+
                 if v:
                     data[k] = v
 

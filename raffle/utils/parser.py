@@ -1,4 +1,5 @@
 import discord
+from redbot.core import bank
 from redbot.core.commands import Context
 
 from ..log import log
@@ -68,6 +69,12 @@ class RaffleManager(object):
             raise InvalidArgument(
                 "Days must be less than this guild's creation date ({} days)".format(guildage)
             )
+
+    @classmethod
+    async def parse_entry_cost(cls, ctx: Context, new_entry_cost: int):
+        max_bal = await bank.get_max_balance(ctx.guild)
+        if new_entry_cost > max_bal:
+            raise InvalidArgument("Entry cost cannot exceed the bank's maximum balance")
 
     def parser(self, ctx: Context):
         if self.account_age:
@@ -209,7 +216,10 @@ class RaffleManager(object):
                 )
 
         if self.suspense_timer:
-            if not isinstance(self.suspense_timer, int) or self.suspense_timer not in [
-                *range(0, 11)
-            ]:
+            if not isinstance(self.suspense_timer, int) or self.suspense_timer not in range(0, 11):
                 raise InvalidArgument("(suspense_timer) must be a number between 0 and 10")
+
+        if self.entry_cost:
+            if not isinstance(self.entry_cost, int):
+                raise InvalidArgument("(entry_cost) must be a number without quotation marks")
+        # I'm not going to parse max_bal in here seeing as the functions synchronous

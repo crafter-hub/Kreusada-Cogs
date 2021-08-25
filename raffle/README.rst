@@ -147,6 +147,13 @@ Simply provide a list of strings. Otherwise, provide a string by itself.
     # selected
     end_message: "Congrats {winner.mention}! You have won my {raffle} raffle."
 
+^^^^^^^^^^
+entry_cost
+^^^^^^^^^^
+
+This condition allows you to make a requirement which requires them to pay a select amount of
+their currency in Red's economy system in order to join.
+
 ^^^^^^^^^^^
 account_age
 ^^^^^^^^^^^
@@ -742,7 +749,7 @@ Clear the badge requirements list for a raffle.
 **Arguments:**
     - `<raffle>` - The name of the raffle.
 
-.. _raffle-command-raffle-edit-badges-add:
+.. _raffle-command-raffle-edit-badges-remove:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 raffle edit badges remove
@@ -761,6 +768,26 @@ Remove badge(s) from the badges requirement list.
 **Arguments:**
     - `<raffle>` - The name of the raffle.
     - `<badges...>` - The badge(s) to remove from the badge requirement list.
+
+.. _raffle-command-raffle-edit-entrycost:
+
+^^^^^^^^^^^^^^^^^^^^^
+raffle edit entrycost
+^^^^^^^^^^^^^^^^^^^^^
+
+**Syntax**
+
+.. code-block:: python
+    
+    [p]raffle edit entrycost <raffle> <new_entry_cost>
+
+**Description**
+
+Edit the suspense timer for a raffle.
+
+**Arguments:**
+    - ``<raffle>`` - The name of the raffle.
+    - ``<new_entry_cost>`` - The new entry cost for the raffle.
 
 .. _raffle-command-raffle-edit-prevented:
 

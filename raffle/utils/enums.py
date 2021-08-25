@@ -115,6 +115,10 @@ class ComponentDescriptions(enum.Enum):
         "The amount of seconds that the bot types for before the winner is shown. "
         "Must be a number between 1 and 10."
     )
+    ENTRY_COST = _(
+        "This condition allows you to make a requirement which requires them to pay a select amount of "
+        "their currency in Red's economy system in order to join."
+    )
 
 
 class ComponentExamples(enum.Enum):
@@ -133,6 +137,7 @@ class ComponentExamples(enum.Enum):
     MAXIMUM_ENTRIES = 10
     ON_END_ACTION = "remove_and_prevent_winner"
     SUSPENSE_TIMER = 3
+    ENTRY_COST = 500
 
 
 SUPPORTED_TYPES = "supported_types"
@@ -192,6 +197,15 @@ class RaffleComponents(enum.Enum):
         REQUIRED_CONDITION: False,
         DESCRIPTION: ComponentDescriptions.END_MESSAGE.value,
         EXAMPLE: ComponentExamples.END_MESSAGE.value,
+    }
+
+    entry_cost: ComponentsDictionary = {
+        SUPPORTED_TYPES: [int],
+        POTENTIAL_EXCEPTIONS: [InvalidArgument],
+        VARIABLES: None,
+        REQUIRED_CONDITION: False,
+        DESCRIPTION: ComponentDescriptions.SUSPENSE_TIMER.value,
+        EXAMPLE: ComponentExamples.SUSPENSE_TIMER.value,
     }
 
     join_message: ComponentsDictionary = {

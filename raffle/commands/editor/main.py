@@ -161,6 +161,44 @@ class EditorCommands(RaffleMixin, metaclass=MetaClass):
         await self.clean_guild_raffles(ctx)
 
     @edit.command()
+    async def entrycost(
+        self, ctx, raffle: RaffleFactoryConverter, new_entry_cost: Union[int, bool]
+    ):
+        """Edit the entry cost for a raffle.
+
+        Use `0` or `false` to disable this condition.
+
+        **Arguments:**
+            - `<raffle>` - The name of the raffle.
+            - `<new_entry_cost>` - The new entry cost for the raffle.
+        """
+        async with self.config.guild(ctx.guild).raffles() as r:
+
+            raffle_data = r.get(raffle, None)
+
+            if not new_entry_cost:
+                with contextlib.suppress(KeyError):
+                    del raffle_data["entry_cost"]
+                return await ctx.send(_("Entry cost removed from this raffle."))
+
+            elif new_entry_cost is True:
+                return await ctx.send(
+                    _('Please provide a number, or "false" to disable this condition.')
+                )
+
+            else:
+                try:
+                    manager = RaffleManager
+                    await manager.parse_entry_cost(ctx, new_entry_cost)
+                except InvalidArgument as e:
+                    return await ctx.send(format_traceback(e))
+
+                raffle_data["entry_cost"] = new_entry_cost
+                await ctx.send(_("Entry cost updated for this raffle."))
+
+        await self.clean_guild_raffles(ctx)
+
+    @edit.command()
     async def description(
         self, ctx, raffle: RaffleFactoryConverter, *, description: Union[bool, str]
     ):
@@ -502,6 +540,7 @@ class EditorCommands(RaffleMixin, metaclass=MetaClass):
             "maximum_entries": raffle_data.get("maximum_entries", None),
             "on_end_action": raffle_data.get("on_end_action", None),
             "suspense_timer": raffle_data.get("suspense_timer", None),
+            "entry_cost": raffle_data.get("entry_cost", None),
         }
 
         message = (
@@ -585,6 +624,7 @@ class EditorCommands(RaffleMixin, metaclass=MetaClass):
             "maximum_entries": valid.get("maximum_entries", None),
             "on_end_action": valid.get("on_end_action", None),
             "suspense_timer": valid.get("suspense_timer", None),
+            "entry_cost": valid.get("entry_cost", None),
         }
 
         for k, v in conditions.items():
