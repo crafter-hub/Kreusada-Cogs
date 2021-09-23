@@ -18,6 +18,12 @@ EMOJIS = {
     "birthday": "\N{PARTY POPPER}",
     "valentines": "\N{GROWING HEART}",
     "wedding": "\N{BRIDE WITH VEIL}\N{ZERO WIDTH JOINER}\N{FEMALE SIGN}\N{VARIATION SELECTOR-16}",
+    "new_home": "\N{HOUSE WITH GARDEN}",
+    "new_years": "\N{CLINKING GLASSES}",
+    "confession": "\N{LOVE LETTER}",
+    "birthday_invitation": "\N{FACE WITH PARTY HORN AND PARTY HAT}",
+    "party_invitation": "\N{FIREWORKS}",
+    "wedding_invitation": "\N{CHURCH}\N{VARIATION SELECTOR-16}",
 }
 
 with open(pathlib.Path(__file__).parent / "info.json") as fp:
@@ -28,6 +34,10 @@ class Emoji:
         self.name = name
         self.emoji = emoji
         self.formatted_name = name.replace("_", " ").capitalize()
+        if name in ["birthday_invitation", "wedding_invitation", "party_invitation"]:
+            self.card_type_name = "invite"
+        else:
+            self.card_type_name = "card"
 
 
 class SendCards(commands.Cog):
@@ -59,7 +69,7 @@ class SendCards(commands.Cog):
             color=await ctx.embed_colour(),
         )
         if step is not None:
-            embed.set_footer(text=f"Step {step}/3")
+            embed.set_footer(text=f"Step {step}/3 | " + "Type \"stop()\" to discontinue the interactive session.")
         if await ctx.embed_requested():
             return await ctx.send(embed=embed)
         else:
@@ -82,21 +92,28 @@ class SendCards(commands.Cog):
         """
         enum = list(enumerate(self.emoji_list, start=1))
         enum_dict = dict(enum)
-        message = "\n".join(f"`{c}:` {v.emoji} {v.formatted_name}" for c, v in enum)
+        td = lambda x: f"{x} " if x < 10 else x
+        message = "\n".join(f"`{td(c)}:` {v.emoji} {v.formatted_name}" for c, v in enum)
         await self.send_embed(
             ctx,
-            f"{self.card_plaque_emoji} **Card Selection**\n\n"
+            f"{self.card_plaque_emoji} **Card/Invite Selection**\n\n"
             "Find the card that you want, and send the number.\n\n" + message,
             1,
         )
-        pred = MessagePredicate.contained_in(list(map(str, range(1, len(enum) + 1))))
+        pred = MessagePredicate.contained_in(list(map(str, range(1, len(enum) + 1))) + ["stop()"])
         try:
             card_type = await self.bot.wait_for("message", check=pred, timeout=40)
         except asyncio.TimeoutError:
             await ctx.send("You took too long to send, please start over.")
             return
+        if card_type.content.lower() == "stop()":
+            await ctx.send("Stopping.")
+            return
 
         card_type = enum_dict[int(card_type.content)]
+        qualified_name = card_type.formatted_name.lower()
+        if card_type.card_type_name == "card":
+            qualified_name += " " + card_type.card_type_name
 
         await self.send_embed(
             ctx,
@@ -113,6 +130,9 @@ class SendCards(commands.Cog):
             await ctx.send("You took too long to send, please start over.")
             return
         else:
+            if user.content.lower() == "stop()":
+                await ctx.send("Stopping.")
+                return
             try:
                 user_converter = commands.UserConverter()
                 user_object = await user_converter.convert(ctx, user.content)
@@ -125,9 +145,9 @@ class SendCards(commands.Cog):
         await self.send_embed(
             ctx,
             f"{self.speech_balloon_emoji} **Message Content**\n\n"
-            f"Now you should send the message to go in your {card_type.formatted_name.lower()} card.\n\n"
+            f"Now you should send the message to go in your {qualified_name}.\n\n"
             f"{self.image_emoji} **Image Attachments**\n\n"
-            f"Attaching an image alongside your message will add an image to your card.",
+            f"Attaching an image alongside your message will add an image to your {card_type.card_type_name}.",
             3,
         )
 
@@ -137,8 +157,11 @@ class SendCards(commands.Cog):
             await ctx.send("You took too long to send, please start over.")
             return
         else:
+            if message.content.lower() == "stop()":
+                await ctx.send("Stopping.")
+                return
             loading_message = await self.send_embed(
-                ctx, f"\N{HOURGLASS}\N{VARIATION SELECTOR-16} **Loading...**"
+                ctx, "\N{HOURGLASS}\N{VARIATION SELECTOR-16} **Loading...**"
             )
 
         kwargs = {}
@@ -148,7 +171,7 @@ class SendCards(commands.Cog):
             kwargs["file"] = attachment
 
         embed = discord.Embed(
-            title=f"{card_type.emoji} {card_type.formatted_name} card from {ctx.author}!",
+            title=f"{card_type.emoji} {qualified_name.title()} from {ctx.author}!",
             description=message.content,
             color=await ctx.embed_colour(),
             timestamp=datetime.datetime.now(datetime.timezone.utc),
@@ -164,13 +187,13 @@ class SendCards(commands.Cog):
         except discord.HTTPException:
             await ctx.send(
                 warning(
-                    f"Failed to send this {card_type.formatted_name.lower()} card to {user_object}. Sorry!"
+                    f"Failed to send this {qualified_name} to {user_object}. Sorry!"
                 )
             )
         else:
             await self.edit_embed(
                 loading_message,
-                f"**{self.airplane_emoji} Card Successfully Sent**\n\n"
-                f"The {card_type.formatted_name} card was successfully sent and is now waiting to be opened "
+                f"**{self.airplane_emoji} {qualified_name.title()} Successfully Sent**\n\n"
+                f"The {qualified_name} was successfully sent and is now waiting to be opened "
                 "by the recipient.",
             )
