@@ -17,6 +17,7 @@ EMOJIS = {
     "get_well_soon": "\N{THERMOMETER}\N{VARIATION SELECTOR-16}",
     "birthday": "\N{PARTY POPPER}",
     "valentines": "\N{GROWING HEART}",
+    "wedding": "\N{BRIDE WITH VEIL}\N{ZERO WIDTH JOINER}\N{FEMALE SIGN}\N{VARIATION SELECTOR-16}",
 }
 
 with open(pathlib.Path(__file__).parent / "info.json") as fp:
@@ -76,7 +77,6 @@ class SendCards(commands.Cog):
     @commands.command()
     async def sendcard(self, ctx: commands.Context):
         """Send a card to a user.
-
         Run the command to open an interactive session where you can
         provide input in a more comfortable way.
         """
