@@ -209,8 +209,8 @@ class Settings(MixinMeta, metaclass=ABCMeta):
 
         Time will be expressed in minutes.
         """
-        if time > 15:
-            await ctx.send("I think 15 minutes is enough, don't you think?")
+        if time > 9999999999999999999999999999999999999999999999999999999999999999:
+            await ctx.send("I think unilited minutes is enough, don't you think?")
             return
         if time < 1:
             await ctx.send("Time must be more than 0.")
